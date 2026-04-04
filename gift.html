@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Queen</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #111;
+        }
+
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff4d6d;
+            font-family: 'Arial', sans-serif;
+            font-size: 2.5rem;
+            opacity: 0;
+            pointer-events: none;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        #startButton {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 100px 100px;
+            width:80px;
+            height:80px;
+            color: #ff4d6d;
+            font-family: Arial, sans-serif;
+            font-size: 1.5rem;
+            border-radius: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="message"></div>
+    <div id="startButton"></div>
+    <audio id="bgm" src="truecut.mp3"></audio>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.min.js"></script>
+    <script>
+        const audio = document.getElementById('bgm');
+        const button = document.getElementById('startButton');
+
+        button.addEventListener('click', () => {
+            audio.play();                  // start music
+            button.style.display = 'none'; // hide button
+            animate();                     // start animation
+        });
+
+        // === THREE.JS SCENE SETUP ===
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 50;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // === PARTICLES SETUP ===
+        const particleMaterial = new THREE.PointsMaterial({
+            color: 0xff4d6d,
+            size: 0.5
+        });
+
+        const particleCount = 2000;
+        const particlesGeometry = new THREE.BufferGeometry();
+        const positionsArray = new Float32Array(particleCount * 3);
+
+        for (let i = 0; i < particleCount; i++) {
+            positionsArray[i * 3] = (Math.random() - 0.5) * 100;
+            positionsArray[i * 3 + 1] = 0;
+            positionsArray[i * 3 + 2] = (Math.random() - 0.5) * 100;
+        }
+
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positionsArray, 3));
+        const particles = new THREE.Points(particlesGeometry, particleMaterial);
+        scene.add(particles);
+
+        // === HEART SHAPE ===
+        function heart3D(t) {
+            const scale = 10;
+            const x = scale * 16 * Math.pow(Math.sin(t), 3);
+            const y = scale * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 2;
+            const z = Math.sin(t * 5) * 2;
+            return new THREE.Vector3(x, y, z);
+        }
+
+        const heartPositions = [];
+        for (let i = 0; i < particleCount; i++) {
+            const t = Math.random() * Math.PI * 2;
+            heartPositions.push(heart3D(t));
+        }
+
+        // === LOVE TEXT LINES ===
+        const messages = [
+            "Hey Princess❤️‍🩹\nTap me!",
+            "I made something small for you",
+            "Just read this slowly… it’s for you.",
+            "You know what I like about you?",
+            "You're amazing\n🔥",
+            "Being around you, even in my thoughts, makes everything better",
+            "You always find a way to lift my mood… even when you don’t realize it",
+            "You inspire me in ways I don’t even say out loud",
+            "I will always be there for you no matter what",
+            "I choose you\n🥰",
+            "You're my peace",
+            "My safe space",
+            "You're Beautiful\n😘",
+            "You're one in a billion",
+            "And yeah…",
+            " I\nLove\nYou\n😘"
+        ];
+
+        const messageElement = document.getElementById('message');
+        let currentMessage = 0;
+        let opacity = 0;
+        let state = 'fadeIn';
+        let lastTime = Date.now();
+        let holdTime = 0;
+        const fadeDuration = 3000; // 3s fade in/out
+        const holdDuration = 5000; // 5s hold
+
+        // === FORCE FIRST MESSAGE TO SHOW IMMEDIATELY ===
+        messageElement.innerText = messages[currentMessage];
+        messageElement.style.opacity = 1; // fully visible immediately
+        state = 'hold'; // start holding first message
+        holdTime = 0;
+
+        // === UPDATE FUNCTION ===
+        function updateMessage() {
+            const now = Date.now();
+            const delta = now - lastTime;
+            lastTime = now;
+
+            if (state === 'fadeIn') {
+                opacity += delta / fadeDuration;
+                if (opacity >= 1) {
+                    opacity = 1;
+                    state = 'hold';
+                    holdTime = 0;
+                }
+            } else if (state === 'hold') {
+                holdTime += delta;
+                if (currentMessage === messages.length - 1) {
+                    opacity = 1; // last message stays
+                    return;
+                }
+                if (holdTime >= holdDuration) {
+                    state = 'fadeOut';
+                }
+            } else if (state === 'fadeOut') {
+                opacity -= delta / fadeDuration;
+                if (opacity <= 0) {
+                    opacity = 0;
+                    currentMessage = (currentMessage + 1) % messages.length;
+                    messageElement.innerText = messages[currentMessage];
+                    state = 'fadeIn';
+                }
+            }
+            messageElement.style.opacity = opacity;
+        }
+
+        let fadingScene = false; // starts false
+let sceneOpacity = 1;     // full opacity
+
+        audio.addEventListener('ended', () => {
+    fadingScene = true; // trigger scene fade
+});
+        
+        // === ANIMATION LOOP ===
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Move particles toward heart
+            const pos = particles.geometry.attributes.position.array;
+            for (let i = 0; i < particleCount; i++) {
+                pos[i * 3] += (heartPositions[i].x - pos[i * 3]) * 0.02;
+                pos[i * 3 + 1] += (heartPositions[i].y - pos[i * 3 + 1]) * 0.02;
+                pos[i * 3 + 2] += (heartPositions[i].z - pos[i * 3 + 2]) * 0.02;
+            }
+            particles.geometry.attributes.position.needsUpdate = true;
+
+            // Rotate heart
+            scene.rotation.y += 0.005;
+
+            // Heartbeat pulsation
+            const scale = 1 + Math.sin(Date.now() * 0.005) * 0.02;
+            particles.scale.set(scale, scale, scale);
+
+            // Update love messages
+            updateMessage();
+
+            renderer.render(scene, camera);
+            if(fadingScene){
+    if(sceneOpacity > 0){
+        sceneOpacity -= 0.005;
+        renderer.domElement.style.opacity = sceneOpacity;
+        messageElement.style.opacity = sceneOpacity;
+    } else {
+    setTimeout(() => {
+        window.location.href = "index.html";
+    }, 1000); // two seconds pause on full black
+    }
+            }
+        }
+
+        // === HANDLE WINDOW RESIZE ===
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+
+</body>
+
+</html>
