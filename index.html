@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fingerprint Login Demo</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: #fff;
+    margin: 0;
+  }
+  .container {
+    text-align: center;
+    background: rgba(0,0,0,0.6);
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+  }
+  button {
+    padding: 15px 25px;
+    margin: 10px;
+    border: none;
+    border-radius: 12px;
+    background-color: #4caf50;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  button:hover {
+    background-color: #45a049;
+  }
+  #message {
+    margin-top: 20px;
+    font-size: 18px;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>Fingerprint Login Demo</h1>
+    <button id="registerBtn">Register Fingerprint</button>
+    <button id="loginBtn">Login with Fingerprint</button>
+    <div id="message"></div>
+  </div>
+
+<script>
+const message = document.getElementById('message');
+
+// Simulate server storage using localStorage
+function saveCredential(credential) {
+  const id = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+  localStorage.setItem('fingerprintCredential', id);
+}
+
+function getStoredCredential() {
+  const id = localStorage.getItem('fingerprintCredential');
+  return id ? Uint8Array.from(atob(id), c => c.charCodeAt(0)) : null;
+}
+
+// Generate a random challenge
+function generateChallenge() {
+  return new Uint8Array(32);
+}
+
+// ----- REGISTER -----
+document.getElementById('registerBtn').addEventListener('click', async () => {
+  try {
+    const publicKey = {
+      challenge: generateChallenge(),
+      rp: { name: "Demo Site" },
+      user: {
+        id: Uint8Array.from('demo_user', c => c.charCodeAt(0)),
+        name: "demo_user",
+        displayName: "Demo User"
+      },
+      pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+      timeout: 60000,
+      attestation: "direct",
+    };
+
+    const credential = await navigator.credentials.create({ publicKey });
+    saveCredential(credential);
+
+    message.textContent = "Fingerprint registered successfully!";
+  } catch (err) {
+    message.textContent = `Registration failed: ${err}`;
+  }
+});
+
+// ----- LOGIN -----
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  try {
+    const storedId = getStoredCredential();
+    if (!storedId) {
+      message.textContent = "No registered fingerprint. Please register first.";
+      return;
+    }
+
+    const publicKey = {
+      challenge: generateChallenge(),
+      allowCredentials: [{
+        id: storedId,
+        type: "public-key"
+      }],
+      timeout: 60000,
+    };
+
+    await navigator.credentials.get({ publicKey });
+    message.textContent = "Fingerprint login successful!";
+  } catch (err) {
+    message.textContent = `Login failed: ${err}`;
+  }
+});
+</script>
+</body>
+</html>
